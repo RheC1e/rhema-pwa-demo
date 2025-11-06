@@ -17,6 +17,8 @@
   <link rel="stylesheet" href="/styles/main.css">
   <!-- jsPDF CDN 備用載入 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+  <!-- html2canvas 用於將 HTML 轉為圖片（支援中文） -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <div id="app">
@@ -79,7 +81,7 @@
           </div>
 
           <!-- 新增按鈕 -->
-          <button id="add-item-btn" class="add-item-button" onclick="window.addExpenseItem && window.addExpenseItem()">
+          <button id="add-item-btn" class="add-item-button">
             <span>+</span> 新增一筆
           </button>
 
@@ -105,8 +107,8 @@
 
           <!-- 操作按鈕 -->
           <div class="action-buttons">
-            <button id="save-btn" class="action-button primary" onclick="window.saveExpenseForm && window.saveExpenseForm()">儲存</button>
-            <button id="export-pdf-btn" class="action-button secondary" onclick="window.exportToPDF && window.exportToPDF()">匯出 PDF</button>
+            <button id="save-btn" class="action-button primary">儲存</button>
+            <button id="export-pdf-btn" class="action-button secondary">匯出 PDF</button>
           </div>
         </div>
       </main>

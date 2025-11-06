@@ -64,6 +64,10 @@ async function init() {
   }
 }
 
+// 防止重複執行的標記
+let isAddingItem = false;
+let isSaving = false;
+
 // 設定事件監聽
 function setupEventListeners() {
   console.log('設定事件監聽器...');
@@ -84,13 +88,59 @@ function setupEventListeners() {
   });
   
   // 先暴露到全局（確保 HTML 中的 onclick 可以工作）
-  window.addExpenseItem = addExpenseItem;
-  window.saveExpenseForm = saveExpenseForm;
+  // 但使用包裝函數防止重複執行
+  window.addExpenseItem = function() {
+    if (isAddingItem) {
+      console.log('正在新增項目，忽略重複點擊');
+      return;
+    }
+    isAddingItem = true;
+    try {
+      addExpenseItem();
+    } finally {
+      setTimeout(() => {
+        isAddingItem = false;
+      }, 500);
+    }
+  };
+  
+  window.saveExpenseForm = function() {
+    if (isSaving) {
+      console.log('正在儲存，忽略重複點擊');
+      return;
+    }
+    isSaving = true;
+    try {
+      saveExpenseForm();
+    } finally {
+      setTimeout(() => {
+        isSaving = false;
+      }, 1000);
+    }
+  };
+  
   window.exportToPDF = exportToPDF;
   window.handleLogin = handleLogin;
   window.handleLogout = handleLogout;
   
-  // 同時綁定事件監聽器（雙重保障）
+  // 移除舊的事件監聽器（如果有的話），避免重複綁定
+  if (addItemBtn) {
+    // 先移除可能存在的舊監聽器
+    const newAddItemBtn = addItemBtn.cloneNode(true);
+    addItemBtn.parentNode.replaceChild(newAddItemBtn, addItemBtn);
+    const newAddItemBtnRef = document.getElementById('add-item-btn');
+    newAddItemBtnRef.addEventListener('click', window.addExpenseItem, { once: false });
+    console.log('新增按鈕事件已綁定（防止重複）');
+  }
+  
+  if (saveBtn) {
+    const newSaveBtn = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+    const newSaveBtnRef = document.getElementById('save-btn');
+    newSaveBtnRef.addEventListener('click', window.saveExpenseForm, { once: false });
+    console.log('儲存按鈕事件已綁定（防止重複）');
+  }
+  
   if (loginBtn) {
     loginBtn.addEventListener('click', handleLogin);
     console.log('登入按鈕事件已綁定');
@@ -98,14 +148,6 @@ function setupEventListeners() {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', handleLogout);
     console.log('登出按鈕事件已綁定');
-  }
-  if (addItemBtn) {
-    addItemBtn.addEventListener('click', addExpenseItem);
-    console.log('新增按鈕事件已綁定');
-  }
-  if (saveBtn) {
-    saveBtn.addEventListener('click', saveExpenseForm);
-    console.log('儲存按鈕事件已綁定');
   }
   if (exportPdfBtn) {
     exportPdfBtn.addEventListener('click', exportToPDF);
@@ -396,7 +438,7 @@ function saveExpenseForm() {
   }
 }
 
-// 匯出 PDF
+// 匯出 PDF（使用 html2canvas 支援中文）
 async function exportToPDF() {
   try {
     console.log('開始匯出 PDF...');
@@ -404,15 +446,18 @@ async function exportToPDF() {
     // 先更新總額
     updateSummary();
     
-    // 載入 jsPDF（優先使用 CDN，因為打包可能有問題）
-    let jsPDF;
+    // 檢查 html2canvas 是否可用
+    if (!window.html2canvas) {
+      alert('PDF 生成功能載入中，請稍候再試');
+      return;
+    }
     
-    // 檢查是否已經從 CDN 載入
+    // 載入 jsPDF
+    let jsPDF;
     if (window.jspdf && window.jspdf.jsPDF) {
       jsPDF = window.jspdf.jsPDF;
       console.log('jsPDF 已從 CDN 載入');
     } else {
-      // 嘗試動態載入 npm 套件
       try {
         const module = await import('jspdf');
         jsPDF = module.jsPDF;
@@ -424,84 +469,59 @@ async function exportToPDF() {
       }
     }
     
-    const doc = new jsPDF();
+    // 建立一個臨時的 PDF 內容容器
+    const formContainer = document.querySelector('.form-container');
+    if (!formContainer) {
+      alert('找不到表單內容');
+      return;
+    }
     
-    console.log('jsPDF 載入成功');
+    // 顯示載入提示
+    const loadingMsg = document.createElement('div');
+    loadingMsg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:10000;';
+    loadingMsg.textContent = '正在生成 PDF，請稍候...';
+    document.body.appendChild(loadingMsg);
     
-    // 設定字體（使用內建字體）
-    const font = 'helvetica';
-    
-    // 標題
-    doc.setFontSize(18);
-    doc.text('請款單', 20, 20);
-    
-    // 使用者資訊
-    doc.setFontSize(12);
-    const now = new Date();
-    const month = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}月`;
-    doc.text(month, 20, 30);
-    doc.text(`RHEMA / ${currentUser?.name || currentUser?.username || ''}`, 20, 37);
-    
-    // 表格標題
-    let yPos = 50;
-    doc.setFontSize(10);
-    doc.text('日期', 20, yPos);
-    doc.text('項目', 50, yPos);
-    doc.text('金額', 100, yPos);
-    doc.text('備註', 130, yPos);
-    
-    yPos += 10;
-    doc.line(20, yPos, 190, yPos);
-    yPos += 5;
-    
-    // 請款項目
-    expenseItems.forEach(item => {
-      if (yPos > 270) {
+    try {
+      // 使用 html2canvas 將表單轉為圖片（支援中文）
+      const canvas = await html2canvas(formContainer, {
+        backgroundColor: '#ffffff',
+        scale: 2, // 提高解析度
+        logging: false,
+        useCORS: true
+      });
+      
+      // 計算 PDF 尺寸（A4 比例）
+      const imgWidth = 210; // A4 寬度 (mm)
+      const pageHeight = 297; // A4 高度 (mm)
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      
+      const doc = new jsPDF('p', 'mm', 'a4');
+      let position = 0;
+      
+      // 第一頁
+      doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      
+      // 如果內容超過一頁，新增頁面
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
         doc.addPage();
-        yPos = 20;
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
       }
       
-      doc.text(item.date, 20, yPos);
-      doc.text(item.type, 50, yPos);
-      doc.text((item.amount || 0).toLocaleString(), 100, yPos);
-      doc.text(item.remark || '', 130, yPos);
-      yPos += 7;
-    });
-    
-    // 總計
-    yPos += 5;
-    doc.line(20, yPos, 190, yPos);
-    yPos += 10;
-    
-    const fuelSubtotal = expenseItems
-      .filter(item => item.type === EXPENSE_TYPES.FUEL)
-      .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-    
-    const entertainmentSubtotal = expenseItems
-      .filter(item => item.type === EXPENSE_TYPES.ENTERTAINMENT)
-      .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-    
-    const otherSubtotal = expenseItems
-      .filter(item => item.type === EXPENSE_TYPES.OTHER)
-      .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-    
-    const total = fuelSubtotal + entertainmentSubtotal + otherSubtotal;
-    
-    doc.setFontSize(10);
-    doc.text(`油資小計: ${fuelSubtotal.toLocaleString()}`, 20, yPos);
-    yPos += 7;
-    doc.text(`交際費小計: ${entertainmentSubtotal.toLocaleString()}`, 20, yPos);
-    yPos += 7;
-    doc.text(`其他小計: ${otherSubtotal.toLocaleString()}`, 20, yPos);
-    yPos += 7;
-    doc.setFontSize(12);
-    doc.setFont(font, 'bold');
-    doc.text(`總計: ${total.toLocaleString()}`, 20, yPos);
-    
-    // 儲存 PDF
-    const fileName = `請款單_${month}_${currentUser?.name || currentUser?.username || 'unknown'}.pdf`;
-    doc.save(fileName);
-    console.log('PDF 匯出成功:', fileName);
+      // 儲存 PDF
+      const now = new Date();
+      const month = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}月`;
+      const fileName = `請款單_${month}_${currentUser?.name || currentUser?.username || 'unknown'}.pdf`;
+      doc.save(fileName);
+      console.log('PDF 匯出成功:', fileName);
+    } finally {
+      // 移除載入提示
+      document.body.removeChild(loadingMsg);
+    }
   } catch (error) {
     console.error('匯出 PDF 失敗:', error);
     alert('匯出 PDF 失敗：' + error.message + '\n\n請檢查瀏覽器控制台查看詳細錯誤');
