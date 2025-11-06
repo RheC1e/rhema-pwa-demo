@@ -74,7 +74,7 @@
           </div>
 
           <!-- 新增按鈕 -->
-          <button id="add-item-btn" class="add-item-button">
+          <button id="add-item-btn" class="add-item-button" onclick="window.addExpenseItem && window.addExpenseItem()">
             <span>+</span> 新增一筆
           </button>
 
@@ -100,8 +100,8 @@
 
           <!-- 操作按鈕 -->
           <div class="action-buttons">
-            <button id="save-btn" class="action-button primary">儲存</button>
-            <button id="export-pdf-btn" class="action-button secondary">匯出 PDF</button>
+            <button id="save-btn" class="action-button primary" onclick="window.saveExpenseForm && window.saveExpenseForm()">儲存</button>
+            <button id="export-pdf-btn" class="action-button secondary" onclick="window.exportToPDF && window.exportToPDF()">匯出 PDF</button>
           </div>
         </div>
       </main>

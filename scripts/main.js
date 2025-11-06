@@ -54,8 +54,10 @@ async function init() {
       showLoginPage();
     }
 
-    // 設定事件監聽
-    setupEventListeners();
+    // 設定事件監聽（延遲一下確保 DOM 完全準備好）
+    setTimeout(() => {
+      setupEventListeners();
+    }, 100);
   } catch (error) {
     console.error('初始化失敗:', error);
     showError('系統初始化失敗，請重新整理頁面');
@@ -64,6 +66,8 @@ async function init() {
 
 // 設定事件監聽
 function setupEventListeners() {
+  console.log('設定事件監聽器...');
+  
   // 確保元素存在後再綁定事件
   const loginBtn = document.getElementById('login-btn');
   const logoutBtn = document.getElementById('logout-btn');
@@ -71,16 +75,44 @@ function setupEventListeners() {
   const saveBtn = document.getElementById('save-btn');
   const exportPdfBtn = document.getElementById('export-pdf-btn');
   
-  if (loginBtn) loginBtn.addEventListener('click', handleLogin);
-  if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
-  if (addItemBtn) addItemBtn.addEventListener('click', addExpenseItem);
-  if (saveBtn) saveBtn.addEventListener('click', saveExpenseForm);
-  if (exportPdfBtn) exportPdfBtn.addEventListener('click', exportToPDF);
+  console.log('按鈕元素檢查:', {
+    loginBtn: !!loginBtn,
+    logoutBtn: !!logoutBtn,
+    addItemBtn: !!addItemBtn,
+    saveBtn: !!saveBtn,
+    exportPdfBtn: !!exportPdfBtn
+  });
   
-  // 也暴露到全局，以防萬一
+  // 先暴露到全局（確保 HTML 中的 onclick 可以工作）
   window.addExpenseItem = addExpenseItem;
   window.saveExpenseForm = saveExpenseForm;
   window.exportToPDF = exportToPDF;
+  window.handleLogin = handleLogin;
+  window.handleLogout = handleLogout;
+  
+  // 同時綁定事件監聽器（雙重保障）
+  if (loginBtn) {
+    loginBtn.addEventListener('click', handleLogin);
+    console.log('登入按鈕事件已綁定');
+  }
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', handleLogout);
+    console.log('登出按鈕事件已綁定');
+  }
+  if (addItemBtn) {
+    addItemBtn.addEventListener('click', addExpenseItem);
+    console.log('新增按鈕事件已綁定');
+  }
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveExpenseForm);
+    console.log('儲存按鈕事件已綁定');
+  }
+  if (exportPdfBtn) {
+    exportPdfBtn.addEventListener('click', exportToPDF);
+    console.log('PDF 按鈕事件已綁定');
+  }
+  
+  console.log('所有事件監聽器設定完成');
 }
 
 // 顯示登入頁面
@@ -420,5 +452,10 @@ function showError(message) {
 }
 
 // 啟動應用程式
-init();
+// 確保 DOM 載入完成後再初始化
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 
