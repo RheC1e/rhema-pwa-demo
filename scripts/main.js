@@ -146,12 +146,24 @@ function addExpenseItem() {
     id: Date.now(),
     date: new Date().toISOString().split('T')[0],
     type: EXPENSE_TYPES.FUEL,
-    amount: 0,
+    amount: 0, // 預設為 0，但顯示時為空字串
     remark: ''
   };
   
   expenseItems.push(newItem);
   renderExpenseItems();
+  
+  // 自動聚焦到新項目的金額欄位
+  setTimeout(() => {
+    const lastRow = document.querySelector('#expense-items tr:last-child');
+    if (lastRow) {
+      const amountInput = lastRow.querySelector('input[type="number"]');
+      if (amountInput) {
+        amountInput.focus();
+        amountInput.select();
+      }
+    }
+  }, 100);
 }
 
 // 刪除請款項目
@@ -201,10 +213,14 @@ function renderExpenseItems() {
       <td>
         <input 
           type="number" 
-          value="${item.amount}" 
+          value="${item.amount || ''}" 
           min="0"
           step="1"
+          placeholder="0"
+          onfocus="if(this.value === '0') this.value = ''; this.select();"
+          oninput="updateExpenseItem(${item.id}, 'amount', parseFloat(this.value) || 0)"
           onchange="updateExpenseItem(${item.id}, 'amount', parseFloat(this.value) || 0)"
+          onblur="if(this.value === '' || this.value === '0') { this.value = '0'; updateExpenseItem(${item.id}, 'amount', 0); }"
         >
       </td>
       <td>
@@ -262,9 +278,16 @@ function loadExpenseItems() {
 
 // 儲存請款單
 function saveExpenseForm() {
+  // 先重新計算總額（確保資料是最新的）
+  updateSummary();
+  
   // 儲存到 localStorage（之後可改為 SharePoint）
+  // 目前使用 localStorage，所以儲存功能是可用的，只是資料存在瀏覽器本地
   localStorage.setItem(`expenseItems_${currentUser?.username}`, JSON.stringify(expenseItems));
-  alert('請款單已儲存！');
+  
+  // 顯示儲存成功訊息，包含總額資訊
+  const total = expenseItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+  alert(`請款單已儲存！\n\n總計：${total.toLocaleString()} 元\n項目數：${expenseItems.length} 筆`);
 }
 
 // 匯出 PDF
