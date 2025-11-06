@@ -30,8 +30,8 @@ let expenseItems = [];
 // 初始化應用程式
 async function init() {
   try {
-    // 動態載入 MSAL
-    const { PublicClientApplication } = await import('https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.0.0/dist/msal-browser.min.js');
+    // 動態載入 MSAL（使用 npm 套件）
+    const { PublicClientApplication } = await import('@azure/msal-browser');
     msalInstance = new PublicClientApplication(msalConfig);
     await msalInstance.initialize();
 
@@ -258,9 +258,9 @@ function saveExpenseForm() {
 // 匯出 PDF
 async function exportToPDF() {
   try {
-    // 動態載入 jsPDF
-    const { jsPDF } = await import('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
-    const doc = new jsPDF.jsPDF();
+    // 動態載入 jsPDF（使用 npm 套件）
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF();
     
     // 設定字體（使用內建字體）
     const font = 'helvetica';
