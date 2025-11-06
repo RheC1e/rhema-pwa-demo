@@ -1,9 +1,10 @@
 // Microsoft 365 登入設定
+// Redirect URI 會自動使用當前網址（支援本地開發和 Vercel 部署）
 const msalConfig = {
   auth: {
     clientId: '33abd69a-d012-498a-bddb-8608cbf10c2d',
     authority: 'https://login.microsoftonline.com/cd4e36bd-ac9a-4236-9f91-a6718b6b5e45',
-    redirectUri: window.location.origin
+    redirectUri: window.location.origin // 自動使用當前網址
   },
   cache: {
     cacheLocation: 'localStorage',
@@ -34,6 +35,15 @@ async function init() {
     const { PublicClientApplication } = await import('@azure/msal-browser');
     msalInstance = new PublicClientApplication(msalConfig);
     await msalInstance.initialize();
+
+    // 處理 redirect 回來的 callback（同一頁面登入）
+    const response = await msalInstance.handleRedirectPromise();
+    if (response) {
+      // 登入成功，從 redirect 回來
+      currentUser = response.account;
+      showMainPage();
+      return;
+    }
 
     // 檢查是否已登入
     const accounts = msalInstance.getAllAccounts();
@@ -87,7 +97,7 @@ function showMainPage() {
   renderExpenseItems();
 }
 
-// 處理登入
+// 處理登入（同一頁面，不開新分頁）
 async function handleLogin() {
   const loginBtn = document.getElementById('login-btn');
   const loginBtnText = document.getElementById('login-btn-text');
@@ -98,15 +108,12 @@ async function handleLogin() {
     loginBtn.disabled = true;
     loginBtnText.style.display = 'none';
     loginLoading.style.display = 'block';
-    loginStatus.textContent = '正在登入...';
+    loginStatus.textContent = '正在導向登入頁面...';
     
-    const response = await msalInstance.loginPopup(msalRequest);
-    currentUser = response.account;
-    
-    loginStatus.textContent = '登入成功！';
-    setTimeout(() => {
-      showMainPage();
-    }, 500);
+    // 使用 loginRedirect 在同一頁面登入（不開新分頁）
+    await msalInstance.loginRedirect(msalRequest);
+    // 注意：loginRedirect 會導向到 Microsoft 登入頁面
+    // 登入成功後會自動 redirect 回來，由 handleRedirectPromise 處理
   } catch (error) {
     console.error('登入失敗:', error);
     loginStatus.textContent = '登入失敗，請重試';
@@ -116,15 +123,20 @@ async function handleLogin() {
   }
 }
 
-// 處理登出
+// 處理登出（同一頁面）
 async function handleLogout() {
   try {
-    await msalInstance.logoutPopup();
+    // 使用 logoutRedirect 在同一頁面登出
+    await msalInstance.logoutRedirect({
+      postLogoutRedirectUri: window.location.origin
+    });
+    // 登出後會自動 redirect 回來，currentUser 會被清除
+  } catch (error) {
+    console.error('登出失敗:', error);
+    // 如果登出失敗，手動清除
     currentUser = null;
     expenseItems = [];
     showLoginPage();
-  } catch (error) {
-    console.error('登出失敗:', error);
   }
 }
 

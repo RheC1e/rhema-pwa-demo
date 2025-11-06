@@ -91,9 +91,10 @@
 
 ### 部署平台
 - **主要平台：** Vercel
-- **Git 倉庫：** GitHub (https://github.com/RheC1e)
+- **Vercel 網址：** https://rhema-pwa-demo.vercel.app
+- **Git 倉庫：** GitHub (https://github.com/RheC1e/rhema-pwa-demo)
 - **GitHub Token：** 已設定（儲存在本地 `.env.local`，不會提交到 Git）
-- **自動部署：** 待設定（Vercel 連接 Git 倉庫後啟用）
+- **自動部署：** 已啟用（Vercel 連接 Git 倉庫，推送即自動部署）
 
 ---
 
@@ -328,9 +329,14 @@
 - 只有航冠國際聯運有限公司租用戶內的用戶可以登入
 
 ### 重新導向 URI
-- **SPA（Single-Page Application）：** 2 個
+- **SPA（Single-Page Application）：** 需要新增以下 URI
+  - `http://localhost:3000`（本地開發）
+  - `http://localhost:5173`（本地開發替代埠）
+  - `https://rhema-pwa-demo.vercel.app`（Vercel 生產環境）✅ **必須新增**
 - **Web：** 0 個
 - **公用用戶端：** 0 個
+
+**⚠️ 重要：** 部署到 Vercel 後，必須在 Azure Portal 中新增 Vercel 網址作為 Redirect URI，否則登入會失敗。詳細步驟請參考 `AZURE_REDIRECT_URI_SETUP.md`。
 
 ### API 權限（已授與）
 所有權限皆為「已委派（Delegated）」類型，且已獲得管理員同意：
