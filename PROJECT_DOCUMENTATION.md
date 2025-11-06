@@ -86,11 +86,14 @@
 ### 開發者帳號
 - **個人信箱（Git/Vercel）：** rhemaluis125@gmail.com
 - **公司信箱：** ivan.chen@rhema.com.tw 正確
+- **GitHub 帳號：** https://github.com/RheC1e
+- **GitHub 使用者名稱：** RheC1e
 
 ### 部署平台
 - **主要平台：** Vercel
-- **Git 倉庫：** 使用 rhemaluis125@gmail.com 帳號
-- **自動部署：** 已設定（需確認）
+- **Git 倉庫：** GitHub (https://github.com/RheC1e)
+- **GitHub Token：** 已設定（儲存在本地 `.env.local`，不會提交到 Git）
+- **自動部署：** 待設定（Vercel 連接 Git 倉庫後啟用）
 
 ---
 

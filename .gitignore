@@ -19,6 +19,12 @@ dist/
 .env.test.local
 .env.production.local
 
+# 敏感資訊（Token、密碼等）
+*.token
+*.secret
+config.local.json
+secrets.json
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
