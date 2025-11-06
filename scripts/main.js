@@ -186,9 +186,11 @@ async function handleLogout() {
 
 // 新增請款項目
 function addExpenseItem() {
-  console.log('新增請款項目');
+  console.log('=== 新增請款項目 ===');
+  console.log('目前項目數:', expenseItems.length);
+  
   const newItem = {
-    id: Date.now(),
+    id: Date.now() + Math.random(), // 確保 ID 唯一
     date: new Date().toISOString().split('T')[0],
     type: EXPENSE_TYPES.FUEL,
     amount: 0, // 預設為 0，但顯示時為空字串
@@ -196,7 +198,10 @@ function addExpenseItem() {
   };
   
   expenseItems.push(newItem);
-  console.log('請款項目已新增，總數:', expenseItems.length);
+  console.log('新項目已加入陣列，總數:', expenseItems.length);
+  console.log('新項目內容:', newItem);
+  
+  // 渲染（但避免在 renderExpenseItems 中再次調用 addExpenseItem）
   renderExpenseItems();
   
   // 自動聚焦到新項目的金額欄位
@@ -209,47 +214,85 @@ function addExpenseItem() {
         amountInput.select();
       }
     }
-  }, 100);
+  }, 200);
 }
 
 // 刪除請款項目（暴露到全局作用域）
 window.deleteExpenseItem = function(id) {
-  expenseItems = expenseItems.filter(item => item.id !== id);
+  console.log('=== 刪除請款項目 ===');
+  console.log('要刪除的 ID:', id);
+  console.log('刪除前項目數:', expenseItems.length);
+  
+  const beforeCount = expenseItems.length;
+  expenseItems = expenseItems.filter(item => {
+    // 確保 ID 類型一致（可能是數字或字串）
+    return item.id != id;
+  });
+  
+  console.log('刪除後項目數:', expenseItems.length);
+  
+  if (expenseItems.length === beforeCount) {
+    console.warn('警告：沒有找到要刪除的項目！');
+  }
+  
   renderExpenseItems();
   updateSummary();
 };
 
 // 更新請款項目（暴露到全局作用域，供 HTML 內聯事件使用）
 window.updateExpenseItem = function(id, field, value) {
-  const item = expenseItems.find(item => item.id === id);
+  // 確保 ID 類型一致
+  const item = expenseItems.find(item => item.id == id);
   if (item) {
+    console.log(`更新項目 ${id} 的 ${field} 為:`, value);
     item[field] = value;
     updateSummary();
+  } else {
+    console.warn(`找不到 ID 為 ${id} 的項目`);
   }
 };
 
 // 渲染請款項目
 function renderExpenseItems() {
+  console.log('開始渲染請款項目，總數:', expenseItems.length);
   const tbody = document.getElementById('expense-items');
-  tbody.innerHTML = '';
   
-  if (expenseItems.length === 0) {
-    addExpenseItem();
+  if (!tbody) {
+    console.error('找不到 expense-items 元素！');
+    return;
   }
   
-  expenseItems.forEach(item => {
+  // 清空現有內容
+  tbody.innerHTML = '';
+  
+  // 如果沒有項目，新增一個（但要避免無限循環）
+  if (expenseItems.length === 0) {
+    console.log('沒有項目，新增一個預設項目');
+    const newItem = {
+      id: Date.now(),
+      date: new Date().toISOString().split('T')[0],
+      type: EXPENSE_TYPES.FUEL,
+      amount: 0,
+      remark: ''
+    };
+    expenseItems.push(newItem);
+  }
+  
+  console.log('開始渲染', expenseItems.length, '個項目');
+  expenseItems.forEach((item, index) => {
+    console.log(`渲染項目 ${index + 1}:`, item);
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>
         <input 
           type="date" 
           value="${item.date}" 
-          onchange="updateExpenseItem(${item.id}, 'date', this.value)"
+          onchange="window.updateExpenseItem && window.updateExpenseItem(${item.id}, 'date', this.value)"
         >
       </td>
       <td>
         <select 
-          onchange="updateExpenseItem(${item.id}, 'type', this.value)"
+          onchange="window.updateExpenseItem && window.updateExpenseItem(${item.id}, 'type', this.value)"
         >
           <option value="${EXPENSE_TYPES.FUEL}" ${item.type === EXPENSE_TYPES.FUEL ? 'selected' : ''}>${EXPENSE_TYPES.FUEL}</option>
           <option value="${EXPENSE_TYPES.ENTERTAINMENT}" ${item.type === EXPENSE_TYPES.ENTERTAINMENT ? 'selected' : ''}>${EXPENSE_TYPES.ENTERTAINMENT}</option>
@@ -264,9 +307,9 @@ function renderExpenseItems() {
           step="1"
           placeholder="0"
           onfocus="if(this.value === '0') this.value = ''; this.select();"
-          oninput="updateExpenseItem(${item.id}, 'amount', parseFloat(this.value) || 0)"
-          onchange="updateExpenseItem(${item.id}, 'amount', parseFloat(this.value) || 0)"
-          onblur="if(this.value === '' || this.value === '0') { this.value = '0'; updateExpenseItem(${item.id}, 'amount', 0); }"
+          oninput="window.updateExpenseItem && window.updateExpenseItem(${item.id}, 'amount', parseFloat(this.value) || 0)"
+          onchange="window.updateExpenseItem && window.updateExpenseItem(${item.id}, 'amount', parseFloat(this.value) || 0)"
+          onblur="if(this.value === '' || this.value === '0') { this.value = '0'; window.updateExpenseItem && window.updateExpenseItem(${item.id}, 'amount', 0); }"
         >
       </td>
       <td>
@@ -274,16 +317,17 @@ function renderExpenseItems() {
           type="text" 
           value="${item.remark}" 
           placeholder="備註說明"
-          onchange="updateExpenseItem(${item.id}, 'remark', this.value)"
+          onchange="window.updateExpenseItem && window.updateExpenseItem(${item.id}, 'remark', this.value)"
         >
       </td>
       <td>
-        <button class="delete-btn" onclick="deleteExpenseItem(${item.id})">刪除</button>
+        <button class="delete-btn" onclick="window.deleteExpenseItem && window.deleteExpenseItem(${item.id})">刪除</button>
       </td>
     `;
     tbody.appendChild(row);
   });
   
+  console.log('渲染完成，已新增', expenseItems.length, '個項目到 DOM');
   updateSummary();
 }
 
