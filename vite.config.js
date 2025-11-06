@@ -36,13 +36,51 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // 強制更新策略：每次部署都清除快取
+        skipWaiting: true,
+        clientsClaim: true,
+        // 不緩存 HTML 檔案，確保總是取得最新版本
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/.*\.html$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 0 // 不緩存 HTML
+              }
+            }
+          },
+          {
+            urlPattern: /^https:\/\/.*\.js$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'js-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 // 24 小時
+              }
+            }
+          }
+        ]
       }
     })
   ],
   server: {
     port: 3000,
     open: true
+  },
+  build: {
+    // 在檔名中加入 hash，確保每次建置都有不同的檔名
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/[name].[hash].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash].[ext]'
+      }
+    }
   }
 });
 
