@@ -404,8 +404,26 @@ async function exportToPDF() {
     // 先更新總額
     updateSummary();
     
-    // 動態載入 jsPDF（使用 npm 套件）
-    const { jsPDF } = await import('jspdf');
+    // 載入 jsPDF（優先使用 CDN，因為打包可能有問題）
+    let jsPDF;
+    
+    // 檢查是否已經從 CDN 載入
+    if (window.jspdf && window.jspdf.jsPDF) {
+      jsPDF = window.jspdf.jsPDF;
+      console.log('jsPDF 已從 CDN 載入');
+    } else {
+      // 嘗試動態載入 npm 套件
+      try {
+        const module = await import('jspdf');
+        jsPDF = module.jsPDF;
+        console.log('jsPDF 從 npm 套件載入成功');
+      } catch (error) {
+        console.error('載入 jsPDF 失敗:', error);
+        alert('無法載入 PDF 生成庫，請檢查網路連線或重新整理頁面');
+        return;
+      }
+    }
+    
     const doc = new jsPDF();
     
     console.log('jsPDF 載入成功');
