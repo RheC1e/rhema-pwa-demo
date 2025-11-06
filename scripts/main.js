@@ -64,11 +64,23 @@ async function init() {
 
 // 設定事件監聽
 function setupEventListeners() {
-  document.getElementById('login-btn').addEventListener('click', handleLogin);
-  document.getElementById('logout-btn').addEventListener('click', handleLogout);
-  document.getElementById('add-item-btn').addEventListener('click', addExpenseItem);
-  document.getElementById('save-btn').addEventListener('click', saveExpenseForm);
-  document.getElementById('export-pdf-btn').addEventListener('click', exportToPDF);
+  // 確保元素存在後再綁定事件
+  const loginBtn = document.getElementById('login-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  const addItemBtn = document.getElementById('add-item-btn');
+  const saveBtn = document.getElementById('save-btn');
+  const exportPdfBtn = document.getElementById('export-pdf-btn');
+  
+  if (loginBtn) loginBtn.addEventListener('click', handleLogin);
+  if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+  if (addItemBtn) addItemBtn.addEventListener('click', addExpenseItem);
+  if (saveBtn) saveBtn.addEventListener('click', saveExpenseForm);
+  if (exportPdfBtn) exportPdfBtn.addEventListener('click', exportToPDF);
+  
+  // 也暴露到全局，以防萬一
+  window.addExpenseItem = addExpenseItem;
+  window.saveExpenseForm = saveExpenseForm;
+  window.exportToPDF = exportToPDF;
 }
 
 // 顯示登入頁面
@@ -142,6 +154,7 @@ async function handleLogout() {
 
 // 新增請款項目
 function addExpenseItem() {
+  console.log('新增請款項目');
   const newItem = {
     id: Date.now(),
     date: new Date().toISOString().split('T')[0],
@@ -151,6 +164,7 @@ function addExpenseItem() {
   };
   
   expenseItems.push(newItem);
+  console.log('請款項目已新增，總數:', expenseItems.length);
   renderExpenseItems();
   
   // 自動聚焦到新項目的金額欄位
@@ -166,21 +180,21 @@ function addExpenseItem() {
   }, 100);
 }
 
-// 刪除請款項目
-function deleteExpenseItem(id) {
+// 刪除請款項目（暴露到全局作用域）
+window.deleteExpenseItem = function(id) {
   expenseItems = expenseItems.filter(item => item.id !== id);
   renderExpenseItems();
   updateSummary();
-}
+};
 
-// 更新請款項目
-function updateExpenseItem(id, field, value) {
+// 更新請款項目（暴露到全局作用域，供 HTML 內聯事件使用）
+window.updateExpenseItem = function(id, field, value) {
   const item = expenseItems.find(item => item.id === id);
   if (item) {
     item[field] = value;
     updateSummary();
   }
-}
+};
 
 // 渲染請款項目
 function renderExpenseItems() {
@@ -278,24 +292,47 @@ function loadExpenseItems() {
 
 // 儲存請款單
 function saveExpenseForm() {
+  console.log('開始儲存請款單...');
+  console.log('請款項目:', expenseItems);
+  
   // 先重新計算總額（確保資料是最新的）
   updateSummary();
   
+  // 檢查是否有使用者
+  if (!currentUser || !currentUser.username) {
+    alert('錯誤：無法取得使用者資訊，請重新登入');
+    return;
+  }
+  
   // 儲存到 localStorage（之後可改為 SharePoint）
   // 目前使用 localStorage，所以儲存功能是可用的，只是資料存在瀏覽器本地
-  localStorage.setItem(`expenseItems_${currentUser?.username}`, JSON.stringify(expenseItems));
-  
-  // 顯示儲存成功訊息，包含總額資訊
-  const total = expenseItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-  alert(`請款單已儲存！\n\n總計：${total.toLocaleString()} 元\n項目數：${expenseItems.length} 筆`);
+  try {
+    const storageKey = `expenseItems_${currentUser.username}`;
+    localStorage.setItem(storageKey, JSON.stringify(expenseItems));
+    console.log('已儲存到 localStorage:', storageKey);
+    
+    // 顯示儲存成功訊息，包含總額資訊
+    const total = expenseItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+    alert(`請款單已儲存！\n\n總計：${total.toLocaleString()} 元\n項目數：${expenseItems.length} 筆`);
+  } catch (error) {
+    console.error('儲存失敗:', error);
+    alert('儲存失敗：' + error.message);
+  }
 }
 
 // 匯出 PDF
 async function exportToPDF() {
   try {
+    console.log('開始匯出 PDF...');
+    
+    // 先更新總額
+    updateSummary();
+    
     // 動態載入 jsPDF（使用 npm 套件）
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
+    
+    console.log('jsPDF 載入成功');
     
     // 設定字體（使用內建字體）
     const font = 'helvetica';
@@ -370,9 +407,10 @@ async function exportToPDF() {
     // 儲存 PDF
     const fileName = `請款單_${month}_${currentUser?.name || currentUser?.username || 'unknown'}.pdf`;
     doc.save(fileName);
+    console.log('PDF 匯出成功:', fileName);
   } catch (error) {
     console.error('匯出 PDF 失敗:', error);
-    alert('匯出 PDF 失敗，請重試');
+    alert('匯出 PDF 失敗：' + error.message + '\n\n請檢查瀏覽器控制台查看詳細錯誤');
   }
 }
 
