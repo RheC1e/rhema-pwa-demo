@@ -1,0 +1,28 @@
+{
+  "name": "rhema-pwa-demo",
+  "version": "1.0.0",
+  "description": "航冠國際聯運有限公司 - 請款系統 PWA",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "pwa",
+    "expense",
+    "rhema"
+  ],
+  "author": "Ivan Chen",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "vite-plugin-pwa": "^0.17.0"
+  },
+  "dependencies": {
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "@azure/msal-browser": "^3.0.0",
+    "jspdf": "^2.5.1"
+  }
+}
+
